@@ -1,0 +1,63 @@
+info:
+  title: Beacon Backoffice xHandler
+  description: xHandler for interacting with the Beacon Backoffice
+  version: 1.0.0
+paths:
+  /products/{productId}/environments:
+    get:
+      x-store:
+        source: "body"
+        target: environments[:productId]
+      x-handler: |
+            let data = context.store("environments[:productId]").get();
+            return context.response.value(200, {
+              pagination: {
+                limit: 10,
+                offset: 0,
+                totalElements: data.length,
+              },
+              data: data,
+            });
+    post:
+      x-handler: |
+        let environment = {
+              environmentId: crypto.randomUUID(),
+              sdkId: crypto.randomUUID(),
+              name: context.request.body("name"),
+            };
+            let addedA = context.store("environments[:productId]").add([environment]);
+            if (!addedA) {
+              return context.response.internalError({ message: 'Environment not added' });
+            }
+            return context.response.created(environment);
+  /products/{productId}/environments/{environmentId}:
+    get:
+      x-store:
+        target: environment[:productId][:environmentId]
+    delete:
+      x-handler: |
+            let deletedA = context.store("environments[:productId]").deleteById('environmentId', context.request.params("environmentId"));
+            let deletedB = context.store("environment[:productId][:environmentId]").delete();
+
+            if (!deletedA && !deletedB) {
+              return context.response.notFound({ message: 'Environment not found' });
+            }
+            console.log(deletedA, deletedB);
+            return context.response.noContent();
+    put:
+      x-handler: |
+            let environment = context.store("environment[:productId][:environmentId]").get();
+
+            if(!environment) {
+              return context.response.notFound({ message: 'Environment not found' });
+            }
+
+            environment.name = context.request.body("name");
+
+            let modifyA = context.store("environments[:productId]").updateById('environmentId', context.request.params("environmentId"), environment)
+            let modifyB = context.store("environment[:productId][:environmentId]").update(environment);
+            if (!modifyA && !modifyB) {
+              return context.response.notFound({ message: 'Environment not found' });
+            }
+            console.log(modifyA, modifyB);
+            return context.response.ok(environment);
