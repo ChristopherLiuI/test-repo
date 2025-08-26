@@ -6,7 +6,6 @@ paths:
   /products/{productId}/environments:
     get:
       x-store:
-        source: "body"
         target: environments[:productId]
       x-handler: |
             let data = context.store("environments[:productId]").get();
